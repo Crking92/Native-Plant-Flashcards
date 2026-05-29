@@ -1,0 +1,29 @@
+{
+  "source_workbook": "Master_Plant_Database(9).xlsx",
+  "spreadsheet_rows_with_scientific_name": 317,
+  "unique_flashcards_created": 315,
+  "duplicate_scientific_names_merged": 2,
+  "cards_with_lbj_or_fallback_photos": 313,
+  "cards_with_larval_host_notes": 107,
+  "family_values_from_existing_deck": 156,
+  "family_values_not_listed": 159,
+  "growth_habit_counts": {
+    "Subshrub": 9,
+    "Tree": 51,
+    "Herb": 143,
+    "Vine": 19,
+    "Fern": 3,
+    "Succulent": 9,
+    "Shrub": 36,
+    "Grass": 28,
+    "Shrub, Tree": 12,
+    "Grass/Grass-like": 3,
+    "Herb, Subshrub": 1,
+    "Succulent, Tree": 1
+  },
+  "notes": [
+    "The spreadsheet did not include a dedicated plant family column; families were filled from the previously uploaded flashcard JSON when names matched.",
+    "Duplicate scientific names were merged into one card because plantData is keyed by scientific name.",
+    "LBJ Image URLs were used as the primary photo source."
+  ]
+}

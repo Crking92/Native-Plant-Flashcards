@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Native Plant Flashcards</title>
+  <style>
+    :root { --bg:#f4f6f3; --card:#fff; --text:#263427; --muted:#657265; --accent:#4a7c59; --border:#d3dcd4; --soft:#eaf0ea; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); margin:0; padding:1rem; display:flex; flex-direction:column; align-items:center; }
+    h1 { margin:0.5rem 0 0.25rem; font-size:1.8rem; text-align:center; }
+    h2.section-title { margin:1rem 0 0.35rem; font-size:1.2rem; text-align:center; }
+    .subtitle { color:var(--muted); text-align:center; margin-bottom:1rem; }
+    .dashboard, .study-view { width:100%; max-width:900px; }
+    .toolbar, .batch-grid { display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center; margin:1rem 0; }
+    input, select, button { font:inherit; }
+    #search { padding:0.75rem; border:1px solid var(--border); border-radius:999px; min-width:280px; }
+    .dash-btn, .plain-btn, .batch-btn { background:white; border:1px solid var(--border); border-radius:12px; padding:0.85rem 1rem; cursor:pointer; transition:0.2s; }
+    .dash-btn:hover, .plain-btn:hover, .batch-btn:hover { border-color:var(--accent); transform:translateY(-1px); }
+    .plain-btn.active, .batch-btn.active { border-color:var(--accent); box-shadow:0 0 0 2px rgba(74,124,89,0.16); }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.75rem; margin:1rem 0; }
+    .stat { background:white; border:1px solid var(--border); border-radius:14px; padding:0.9rem; text-align:center; }
+    .stat strong { display:block; font-size:1.4rem; }
+    .helper { color:var(--muted); text-align:center; max-width:720px; margin:0.25rem auto 0.5rem; line-height:1.45; }
+    .batch-btn { min-width:145px; text-align:left; }
+    .batch-btn strong { display:block; }
+    .batch-btn span { color:var(--muted); font-size:0.9rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-top:1rem; }
+    .empty-box { background:white; border:1px dashed var(--border); border-radius:14px; padding:1rem; text-align:center; color:var(--muted); margin-top:1rem; }
+    .study-view { display:none; flex-direction:column; align-items:center; }
+    .nav-controls { width:100%; max-width:560px; display:flex; justify-content:space-between; align-items:center; gap:1rem; margin:0.75rem 0 1rem; }
+    .progress { color:var(--muted); font-weight:600; text-align:center; }
+    .flashcard-container { perspective:1000px; height:620px; width:100%; max-width:560px; position:relative; }
+    .flashcard { width:100%; height:100%; position:relative; transition:transform 0.55s; transform-style:preserve-3d; cursor:pointer; }
+    .flashcard.flipped { transform:rotateY(180deg); }
+    .face { position:absolute; width:100%; height:100%; backface-visibility:hidden; border-radius:18px; background:white; border:1px solid var(--border); overflow:hidden; box-shadow:0 8px 30px rgba(36,52,39,0.08); }
+    .front { display:flex; flex-direction:column; }
+    .front-img-wrap { height:70%; background:var(--soft); display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .front img { width:100%; height:100%; object-fit:cover; display:block; }
+    .no-photo { color:var(--muted); padding:2rem; text-align:center; }
+    .front-title { padding:1rem 1.25rem; }
+    .front-title h2 { margin:0; font-size:1.35rem; }
+    .front-title p { margin:0.35rem 0 0; color:var(--muted); font-style:italic; }
+    .hint { margin-top:0.65rem; color:var(--accent); font-weight:700; }
+    .back { transform:rotateY(180deg); padding:1.25rem; overflow-y:auto; }
+    .back h2 { font-style:italic; margin:0; }
+    .back h3 { margin:0.25rem 0 0.75rem; color:var(--muted); }
+    .tag-row { display:flex; flex-wrap:wrap; gap:0.4rem; margin:0.75rem 0; }
+    .tag { background:var(--soft); color:var(--text); border-radius:999px; padding:0.3rem 0.65rem; font-size:0.85rem; }
+    .details { display:grid; grid-template-columns:1fr; gap:0.55rem; }
+    .detail { border-top:1px solid var(--border); padding-top:0.5rem; }
+    .detail b { color:var(--text); }
+    .detail span { color:var(--muted); }
+    .source-link { display:inline-block; margin-top:0.75rem; color:var(--accent); font-weight:700; }
+    .arrow-row { width:100%; max-width:560px; display:flex; justify-content:space-between; margin-top:1rem; }
+    .arrow-btn { background:var(--accent); color:white; border:none; width:3.2rem; height:3.2rem; border-radius:50%; cursor:pointer; font-size:1.2rem; }
+    .arrow-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    @media (max-width:640px) {
+      .flashcard-container { height:600px; }
+      .nav-controls { flex-wrap:wrap; justify-content:center; }
+      #search { min-width:100%; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Native Plant Flashcards</h1>
+  <div class="subtitle">Spreadsheet build using Lady Bird Johnson Wildflower Center fields</div>
+
+  <div id="dash" class="dashboard">
+    <div class="stats" id="stats"></div>
+
+    <h2 class="section-title">Start studying</h2>
+    <div class="helper">Choose a small deck first. Batches are groups of 50 plants, so the first screen stays clean instead of listing every plant.</div>
+    <div class="toolbar">
+      <button class="plain-btn" onclick="start('all')">Study All</button>
+      <button class="plain-btn" onclick="start('shuffle')">Shuffle All</button>
+      <button class="plain-btn" onclick="start('larval')">Larval Hosts Only</button>
+      <button class="plain-btn" onclick="start('grasses')">Grasses</button>
+      <button class="plain-btn" onclick="start('woody')">Trees/Shrubs/Vines</button>
+    </div>
+
+    <h2 class="section-title">Study in batches of 50</h2>
+    <div id="batch-grid" class="batch-grid"></div>
+
+    <h2 class="section-title">Find one plant</h2>
+    <div class="helper">Search only when you want to jump to a specific plant. Results appear below after you type.</div>
+    <div class="toolbar">
+      <input id="search" placeholder="Search scientific/common name, habitat, bloom color..." oninput="drawSearchResults()" />
+      <button class="plain-btn" onclick="clearSearch()">Clear Search</button>
+    </div>
+    <div class="grid" id="dash-grid"></div>
+  </div>
+
+  <div id="study" class="study-view">
+    <div class="nav-controls">
+      <button class="plain-btn" onclick="showDash()">&larr; Menu</button>
+      <span id="progress" class="progress"></span>
+      <button class="plain-btn" onclick="shuffleCurrentDeck()">Shuffle Deck</button>
+    </div>
+    <div class="flashcard-container">
+      <div class="flashcard" id="card" onclick="this.classList.toggle('flipped')">
+        <div class="face front">
+          <div class="front-img-wrap"><img id="photo" alt="Plant photo"><div id="no-photo" class="no-photo" style="display:none;">No image available</div></div>
+          <div class="front-title">
+            <h2 id="front-common"></h2>
+            <p id="front-sci"></p>
+            <div class="hint">Click to flip</div>
+          </div>
+        </div>
+        <div class="face back" id="back-content"></div>
+      </div>
+    </div>
+    <div class="arrow-row">
+      <button class="arrow-btn" id="prev" onclick="changeCard(-1); event.stopPropagation();">&lsaquo;</button>
+      <button class="arrow-btn" id="next" onclick="changeCard(1); event.stopPropagation();">&rsaquo;</button>
+    </div>
+  </div>
+
+  <script src="Data/daily_data.js"></script>
+  <script>
+    let allCards = Object.keys(plantData).map(k => ({name:k, ...plantData[k]}));
+    let deck = [];
+    let idx = 0;
+    const batchSize = 50;
+    const clean = v => (v || '').toString();
+    const has = v => clean(v).trim().length > 0;
+    function trait(p, key) { return (p.traits && p.traits[key]) ? p.traits[key] : ''; }
+    function escapeHtml(str) {
+      return clean(str).replace(/[&<>\"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m]));
+    }
+    function cardSearchText(p) {
+      return [p.name, p.common_name, p.family, trait(p,'habit'), trait(p,'native_habitat'), trait(p,'bloom_color'), trait(p,'larval_host')].join(' ').toLowerCase();
+    }
+    function filteredCards(mode='all') {
+      let q = document.getElementById('search')?.value.toLowerCase().trim() || '';
+      let cards = allCards.filter(p => !q || cardSearchText(p).includes(q));
+      if (mode === 'larval') cards = cards.filter(p => (p.lepidoptera || 0) > 0 || has(trait(p,'larval_host')));
+      if (mode === 'grasses') cards = cards.filter(p => /grass|sedge|rush/i.test(trait(p,'habit') + ' ' + trait(p,'common_name')) || /grass|sedge|rush/i.test(p.common_name));
+      if (mode === 'woody') cards = cards.filter(p => /tree|shrub|vine/i.test(trait(p,'habit')));
+      if (mode === 'shuffle') cards.sort(() => Math.random() - 0.5);
+      return cards;
+    }
+    function getBatch(batchIndex) {
+      const start = batchIndex * batchSize;
+      return allCards.slice(start, start + batchSize);
+    }
+    function startBatch(batchIndex, doShuffle=false) {
+      deck = getBatch(batchIndex);
+      if (doShuffle) deck.sort(() => Math.random() - 0.5);
+      if (!deck.length) return;
+      idx = 0;
+      document.getElementById('dash').style.display = 'none';
+      document.getElementById('study').style.display = 'flex';
+      render();
+    }
+    function setStats() {
+      let photoCount = allCards.filter(p => p.photos && p.photos.length).length;
+      let larvalCount = allCards.filter(p => (p.lepidoptera || 0) > 0 || has(trait(p,'larval_host'))).length;
+      let habits = new Set(allCards.map(p => trait(p,'habit')).filter(Boolean));
+      document.getElementById('stats').innerHTML = `
+        <div class="stat"><strong>${allCards.length}</strong>cards</div>
+        <div class="stat"><strong>${photoCount}</strong>with photos</div>
+        <div class="stat"><strong>${larvalCount}</strong>with larval-host notes</div>
+        <div class="stat"><strong>${habits.size}</strong>growth habits</div>`;
+    }
+    function drawBatchButtons() {
+      const batchCount = Math.ceil(allCards.length / batchSize);
+      const grid = document.getElementById('batch-grid');
+      grid.innerHTML = '';
+      for (let b = 0; b < batchCount; b++) {
+        const cards = getBatch(b);
+        if (!cards.length) continue;
+        const first = cards[0].name;
+        const last = cards[cards.length - 1].name;
+        const startNum = b * batchSize + 1;
+        const endNum = b * batchSize + cards.length;
+        grid.innerHTML += `<button class="batch-btn" onclick="startBatch(${b})"><strong>Batch ${b + 1}</strong><span>${startNum}-${endNum}<br>${escapeHtml(first)} to ${escapeHtml(last)}</span></button>`;
+      }
+    }
+    function drawSearchResults() {
+      const q = document.getElementById('search')?.value.toLowerCase().trim() || '';
+      const grid = document.getElementById('dash-grid');
+      if (!q) {
+        grid.innerHTML = '';
+        return;
+      }
+      let cards = filteredCards('all');
+      if (!cards.length) {
+        grid.innerHTML = `<div class="empty-box">No matching plants found.</div>`;
+        return;
+      }
+      grid.innerHTML = cards.slice(0, 80).map((p, i) => `<div class="dash-btn" onclick="startAt('${encodeURIComponent(p.name)}')"><b>${escapeHtml(p.common_name || p.name)}</b><br><span style="color:var(--muted);font-style:italic;">${escapeHtml(p.name)}</span></div>`).join('');
+      if (cards.length > 80) grid.innerHTML += `<div class="dash-btn">Showing first 80 matches. Keep typing to narrow.</div>`;
+    }
+    function clearSearch() {
+      document.getElementById('search').value = '';
+      drawSearchResults();
+    }
+    function start(mode) {
+      deck = filteredCards(mode);
+      if (!deck.length) return;
+      idx = 0;
+      document.getElementById('dash').style.display = 'none';
+      document.getElementById('study').style.display = 'flex';
+      render();
+    }
+    function startAt(encodedName) {
+      let name = decodeURIComponent(encodedName);
+      deck = filteredCards('all');
+      idx = Math.max(0, deck.findIndex(p => p.name === name));
+      document.getElementById('dash').style.display = 'none';
+      document.getElementById('study').style.display = 'flex';
+      render();
+    }
+    function shuffleCurrentDeck() {
+      deck.sort(() => Math.random() - 0.5); idx = 0; render();
+    }
+    function detail(label, value) {
+      if (!has(value)) return '';
+      return `<div class="detail"><b>${label}:</b> <span>${escapeHtml(value)}</span></div>`;
+    }
+    function render() {
+      let p = deck[idx];
+      document.getElementById('card').classList.remove('flipped');
+      let photo = p.photos && p.photos.length ? p.photos[0].url : '';
+      let img = document.getElementById('photo');
+      let no = document.getElementById('no-photo');
+      if (photo) { img.src = photo; img.style.display='block'; no.style.display='none'; }
+      else { img.removeAttribute('src'); img.style.display='none'; no.style.display='block'; }
+      document.getElementById('front-common').innerText = p.common_name || p.name;
+      document.getElementById('front-sci').innerText = p.name;
+      let tags = [trait(p,'habit'), trait(p,'duration'), trait(p,'bloom_color'), trait(p,'water_use')].filter(Boolean).map(x => `<span class="tag">${escapeHtml(x)}</span>`).join('');
+      let back = `<h2>${escapeHtml(p.name)}</h2><h3>${escapeHtml(p.common_name || '')}</h3><div class="tag-row">${tags}</div><div class="details">`;
+      back += detail('Family', p.family);
+      back += detail('Size', trait(p,'size') || trait(p,'size_notes'));
+      back += detail('Bloom', [trait(p,'bloom_time'), trait(p,'bloom_color')].filter(Boolean).join(' - '));
+      back += detail('Light', trait(p,'light_requirement'));
+      back += detail('Water', trait(p,'water_use') || trait(p,'water_req'));
+      back += detail('Soil moisture', trait(p,'soil_moisture'));
+      back += detail('Drought tolerance', trait(p,'drought_tolerance'));
+      back += detail('Native habitat', trait(p,'native_habitat'));
+      back += detail('Attracts', trait(p,'attracts'));
+      back += detail('Wildlife use', trait(p,'wildlife'));
+      back += detail('Larval host notes', trait(p,'larval_host'));
+      back += detail('Seed collection', trait(p,'seed_collection'));
+      back += detail('Warning', trait(p,'warning'));
+      back += `</div>`;
+      if (has(trait(p,'lbj_url'))) back += `<a class="source-link" href="${escapeHtml(trait(p,'lbj_url'))}" target="_blank" rel="noopener">LBJ plant page</a>`;
+      document.getElementById('back-content').innerHTML = back;
+      document.getElementById('progress').innerText = `${idx + 1} / ${deck.length}`;
+      document.getElementById('prev').disabled = idx === 0;
+      document.getElementById('next').disabled = idx === deck.length - 1;
+    }
+    function changeCard(dir) {
+      idx = Math.max(0, Math.min(deck.length - 1, idx + dir));
+      render();
+    }
+    function showDash() {
+      document.getElementById('dash').style.display = 'block';
+      document.getElementById('study').style.display = 'none';
+      drawSearchResults();
+    }
+    setStats();
+    drawBatchButtons();
+    drawSearchResults();
+  </script>
+</body>
+</html>
